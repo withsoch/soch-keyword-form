@@ -443,6 +443,19 @@
     </div>
 
     <div class="field">
+      <label for="target_site">Publish to</label>
+      <div class="select-wrap">
+        <select id="target_site">
+          <option value="withsoch">Publish to withsoch.com</option>
+          <option value="withumair">Publish to withumair.com</option>
+          <option value="signalhouse">Publish to Withsignalhouse</option>
+          <option value="soovita">Publish to soovita.com</option>
+        </select>
+      </div>
+      <div class="hint">Which site this article gets committed to. The approval emails and the live URL all follow this choice.</div>
+    </div>
+
+    <div class="field">
       <label for="submitted_by">Your name</label>
       <input type="text" id="submitted_by" placeholder="e.g. Sara" />
     </div>
@@ -637,6 +650,9 @@ function deleteEmail(e, index) {
 
 async function submitKeyword() {
   const keyword = document.getElementById('keyword').value.trim();
+  const targetSiteEl = document.getElementById('target_site');
+  const targetSite = targetSiteEl.value;
+  const targetSiteLabel = targetSiteEl.options[targetSiteEl.selectedIndex].text.replace(/^Publish to\s*/i, '');
   const submittedBy = document.getElementById('submitted_by').value.trim();
   const email = document.getElementById('email').value.trim().toLowerCase();
   const priority = document.querySelector('input[name="priority"]:checked')?.value || 'medium';
@@ -668,13 +684,13 @@ async function submitKeyword() {
     const response = await fetch('https://sochconsulting.app.n8n.cloud/webhook/seo-keyword-submit', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ keyword, submitted_by: submittedBy || 'Team', email, priority, notes })
+      body: JSON.stringify({ keyword, target_site: targetSite, submitted_by: submittedBy || 'Team', email, priority, notes })
     });
 
     if (response.ok) {
       statusBox.className = 'status success';
       statusTitle.textContent = 'Keyword submitted';
-      statusMsg.textContent = '"' + keyword + '" is now in the pipeline. Approvals will be sent to ' + email + '.';
+      statusMsg.textContent = '"' + keyword + '" is now in the pipeline for ' + targetSiteLabel + '. Approvals will be sent to ' + email + '.';
       document.getElementById('keyword').value = '';
       document.getElementById('submitted_by').value = '';
       document.getElementById('notes').value = '';
@@ -695,6 +711,21 @@ async function submitKeyword() {
 
 document.getElementById('keyword').addEventListener('keydown', function(e) {
   if (e.key === 'Enter') submitKeyword();
+});
+
+// Remember the last site chosen - most sessions submit several keywords for the
+// same site, and silently defaulting back to withsoch.com would publish to the
+// wrong repo.
+var SITE_KEY = 'soch_keyword_target_site';
+var siteSelect = document.getElementById('target_site');
+try {
+  var savedSite = localStorage.getItem(SITE_KEY);
+  if (savedSite && siteSelect.querySelector('option[value="' + savedSite + '"]')) {
+    siteSelect.value = savedSite;
+  }
+} catch (e) {}
+siteSelect.addEventListener('change', function() {
+  try { localStorage.setItem(SITE_KEY, siteSelect.value); } catch (e) {}
 });
 
 // Init
